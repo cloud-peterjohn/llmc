@@ -2,11 +2,11 @@
 
 # export CUDA_VISIBLE_DEVICES=0,1
 
-llmc=/path/to/llmc
+llmc=/kaggle/working/Awq/
 export PYTHONPATH=$llmc:$PYTHONPATH
 
-task_name=awq_w_only
-config=${llmc}/configs/quantization/methods/Awq/awq_w_only.yml
+task_name=step_1_awq
+config=${llmc}/configs/quantization/combination/awq_comb_omni/w4a16g128/step_1_awq.yml
 
 nnodes=1
 nproc_per_node=1
