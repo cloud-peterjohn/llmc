@@ -10,9 +10,8 @@ config=${llmc}/configs/quantization/methods/QuaRot/quarot_w_a.yml
 # task_name=step_2_omni
 # config=${llmc}/configs/quantization/combination/awq_comb_omni/w4a16g128/step_2_omniq.yml
 
-nnodes=1
-nproc_per_node=1
-
+# nnodes=1
+# nproc_per_node=1
 
 find_unused_port() {
     while true; do
@@ -25,28 +24,11 @@ find_unused_port() {
 }
 UNUSED_PORT=$(find_unused_port)
 
-
-MASTER_ADDR=127.0.0.1
-MASTER_PORT=$UNUSED_PORT
+# MASTER_ADDR=127.0.0.1
+# MASTER_PORT=$UNUSED_PORT
 task_id=$UNUSED_PORT
 
-# nohup \
-# torchrun \
-# --nnodes $nnodes \
-# --nproc_per_node $nproc_per_node \
-# --rdzv_id $task_id \
-# --rdzv_backend c10d \
-# --rdzv_endpoint $MASTER_ADDR:$MASTER_PORT \
-# ${llmc}/llmc/__main__.py --config $config --task_id $task_id \
-# > ${task_name}.log 2>&1 &
-
-torchrun \
-    --nnodes $nnodes \
-    --nproc_per_node $nproc_per_node \
-    --rdzv_id $task_id \
-    --rdzv_backend c10d \
-    --rdzv_endpoint $MASTER_ADDR:$MASTER_PORT \
-    ${llmc}/llmc/__main__.py --config $config --task_id $task_id
+python ${llmc}/llmc/__main__.py --config $config --task_id $task_id
 
 sleep 2
 ps aux | grep '__main__.py' | grep $task_id | awk '{print $2}' > ${task_name}.pid
