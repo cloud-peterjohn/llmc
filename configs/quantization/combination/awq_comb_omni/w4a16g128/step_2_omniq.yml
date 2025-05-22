@@ -53,4 +53,4 @@ quant:
 save:
     save_trans: False
     save_fake: False
-    save_path: /path/to/save/
+    save_path: /content/save_omniq/
