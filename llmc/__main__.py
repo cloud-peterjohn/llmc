@@ -36,7 +36,7 @@ os.environ["RANK"] = "0"
 os.environ["WORLD_SIZE"] = "1"
 # import torch.distributed as dist
 
-# dist.init_process_group(backend="nccl") 
+# dist.init_process_group(backend="nccl")
 
 
 def main(config):
@@ -63,7 +63,7 @@ def main(config):
             )
             blockwise_opt.run_block_loop()
             blockwise_opts.append(blockwise_opt)
-            dist.barrier()
+
         else:
             dataset = BaseDataset(
                 model.get_tokenizer(), config.calib, model.batch_process
@@ -82,7 +82,6 @@ def main(config):
             )
             blockwise_opt.run_block_loop()
             blockwise_opts.append(blockwise_opt)
-            dist.barrier()
 
     eval_model(model, blockwise_opts, eval_list, eval_pos="transformed")
     if int(os.environ["RANK"]) == 0:
@@ -189,7 +188,6 @@ def main(config):
             )
             logger.info(f"opencompass_cmd : {opencompass_cmd}")
             os.system(opencompass_cmd)
-    dist.barrier()
 
 
 if __name__ == "__main__":
@@ -265,7 +263,7 @@ if __name__ == "__main__":
             mkdirs(save_fake_path)
 
     # Synchronize all processes after directory creation
-    # dist.barrier()
+    #
 
     main(config)
 
