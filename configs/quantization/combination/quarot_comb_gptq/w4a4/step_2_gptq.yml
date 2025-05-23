@@ -3,12 +3,12 @@ base:
 model:
     type: Llama
     # Load Quarot-transformed model
-    path: /content/save_quarot_trans_for_gptq/transformed_model
+    path: /kaggle/working/save_quarot_trans_for_gptq/transformed_model
     torch_dtype: auto
 calib:
     name: wikitext2
     download: True
-    path: /content/calib_data
+    path: /kaggle/working/calib_data
     n_samples: 128
     bs: 1
     seq_len: 2048
@@ -18,7 +18,7 @@ eval:
     eval_pos: [fake_quant]
     name: wikitext2
     download: True
-    path: /content/eval_data
+    path: /kaggle/working/eval_data
     seq_len: 2048
     # For 7B / 13B model eval, bs can be set to "1", and inference_per_block can be set to "False".
     # For 70B model eval, bs can be set to "20", and inference_per_block can be set to "True".
@@ -49,4 +49,4 @@ quant:
 save:
     save_trans: False
     save_fake: False
-    save_path: /content/save_gptq/
+    save_path: /kaggle/working/save_gptq/

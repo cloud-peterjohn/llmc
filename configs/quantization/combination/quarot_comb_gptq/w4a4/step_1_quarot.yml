@@ -2,14 +2,14 @@ base:
     seed: &seed 0
 model:
     type: Llama
-    path: /content/llama_model
+    path: /kaggle/working/llama_model
     tokenizer_mode: slow
     torch_dtype: auto
 eval:
     eval_pos: [fake_quant]
     name: wikitext2
     download: True
-    path: /content/eval_data
+    path: /kaggle/working/eval_data
     seq_len: 2048
     # For 7B / 13B model eval, bs can be set to "1", and inference_per_block can be set to "False".
     # For 70B model eval, bs can be set to "20", and inference_per_block can be set to "True".
@@ -35,4 +35,4 @@ save:
     # Save the Quarot-transformed model.
     save_trans: True
     save_fake: False
-    save_path: /content/save_quarot_trans_for_gptq/
+    save_path: /kaggle/working/save_quarot_trans_for_gptq/

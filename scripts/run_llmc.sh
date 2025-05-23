@@ -2,7 +2,7 @@
 
 # export CUDA_VISIBLE_DEVICES=0,1
 
-llmc=/content/Awq/
+llmc=/kaggle/working/Awq/
 export PYTHONPATH=$llmc:$PYTHONPATH
 
 task_name=quarot_w_a
