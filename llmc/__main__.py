@@ -105,7 +105,7 @@ def main(config):
             import shutil
             import os
 
-            for path in ["/content/eval_data", "/content/llama_model"]:
+            for path in ["/kaggle/working/eval_data", "/kaggle/working/llama_model"]:
                 if os.path.exists(path):
                     shutil.rmtree(path)
             deploy_all_modality(blockwise_opts, "fake_quant")
