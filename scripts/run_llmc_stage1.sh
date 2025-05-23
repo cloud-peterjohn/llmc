@@ -5,8 +5,8 @@
 llmc=/kaggle/working/Awq/
 export PYTHONPATH=$llmc:$PYTHONPATH
 
-task_name=step_1_awq
-config=${llmc}/configs/quantization/combination/awq_comb_omni/w4a16g128/step_1_awq.yml
+task_name=hqq_w_only
+config=${llmc}/configs/quantization/methods/HQQ/hqq_w_only.yml
 # task_name=step_2_omni
 # config=${llmc}/configs/quantization/combination/awq_comb_omni/w4a16g128/step_2_omniq.yml
 
