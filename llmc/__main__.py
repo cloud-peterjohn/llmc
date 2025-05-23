@@ -102,6 +102,7 @@ def main(config):
         eval_model(model, blockwise_opts, eval_list, eval_pos="fake_quant_wo_kv")
 
         if "save" in config and config.save.get("save_fake", False):
+
             import shutil
             import os
 
