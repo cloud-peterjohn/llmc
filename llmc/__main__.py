@@ -34,6 +34,9 @@ import os
 
 os.environ["RANK"] = "0"
 os.environ["WORLD_SIZE"] = "1"
+# import torch.distributed as dist
+
+# dist.init_process_group(backend="nccl") 
 
 
 def main(config):

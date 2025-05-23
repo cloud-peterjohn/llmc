@@ -13,28 +13,36 @@ from .utils import is_fp8_supported_gpu
 
 if is_fp8_supported_gpu():
     from .kernel import weight_cast_to_bf16, weight_cast_to_fp8
-    logger.info('Successfully imported Triton kernel.')
+
+    logger.info("Successfully imported Triton kernel.")
 else:
     from .quant import weight_cast_to_bf16, weight_cast_to_fp8
-    logger.info('Triton kernel not available (non-Hopper GPU detected). \
-                Falling back to LLMC Quantizer implementation.')
 
-from .module_utils import (_LLMC_LINEAR_TYPES_, _LLMC_LN_TYPES_,
-                           _TRANSFORMERS_LINEAR_TYPES_,
-                           _TRANSFORMERS_LN_TYPES_, FakeQuantLinear,
-                           LlmcFp8Linear)
+    logger.info(
+        "Triton kernel not available (non-Hopper GPU detected). \
+                Falling back to LLMC Quantizer implementation."
+    )
+
+from .module_utils import (
+    _LLMC_LINEAR_TYPES_,
+    _LLMC_LN_TYPES_,
+    _TRANSFORMERS_LINEAR_TYPES_,
+    _TRANSFORMERS_LN_TYPES_,
+    FakeQuantLinear,
+    LlmcFp8Linear,
+)
 
 
 @ALGO_REGISTRY
 class Awq(BaseBlockwiseQuantization):
     def __init__(self, model, quant_config, input, padding_mask, config):
         super().__init__(model, quant_config, input, padding_mask, config)
-        special_config = self.quant_config.get('special', {})
-        self.trans = special_config.get('trans', True)
-        self.trans_version = special_config.get('trans_version', 'v2')
-        self.save_scale = special_config.get('save_scale', False)
-        self.awq_bs = special_config.get('awq_bs', None)
-        self.save_mem = special_config.get('save_mem', True)
+        special_config = self.quant_config.get("special", {})
+        self.trans = special_config.get("trans", True)
+        self.trans_version = special_config.get("trans_version", "v2")
+        self.save_scale = special_config.get("save_scale", False)
+        self.awq_bs = special_config.get("awq_bs", None)
+        self.save_mem = special_config.get("save_mem", True)
 
     @torch.no_grad()
     def scaling_weight(self, w, scales, is_gqa):
@@ -51,9 +59,9 @@ class Awq(BaseBlockwiseQuantization):
 
         for idx, _m in enumerate(layers):
             if _m.weight.data.dtype == torch.float8_e4m3fn:
-                weight = weight_cast_to_bf16(_m.weight.data,
-                                             _m.weight_scale_inv.data,
-                                             self.fp8_block_size).to(torch.bfloat16)
+                weight = weight_cast_to_bf16(
+                    _m.weight.data, _m.weight_scale_inv.data, self.fp8_block_size
+                ).to(torch.bfloat16)
             else:
                 weight = _m.weight.data.clone()
             org_shape = weight.shape
@@ -78,7 +86,7 @@ class Awq(BaseBlockwiseQuantization):
             batch_means = []
             b_num = x.shape[0] // self._bs
             for num in range(b_num):
-                batch_x = x[num * self._bs:(num + 1) * self._bs]
+                batch_x = x[num * self._bs : (num + 1) * self._bs]
                 batch_mean = batch_x.abs().view(-1, batch_x.shape[-1]).mean(0)
                 batch_means.append(batch_mean)
             final_mean = sum(batch_means) / len(batch_means)
@@ -88,20 +96,16 @@ class Awq(BaseBlockwiseQuantization):
     def get_scales(self, prev_op, x, w_max, is_gqa, ratio):
         if is_gqa:
             x_tmp = prev_op(x)
-            w_tmp = self.get_weight_scale({'prev_op': prev_op})
+            w_tmp = self.get_weight_scale({"prev_op": prev_op})
         else:
             x_tmp = x
             w_tmp = w_max
 
         x_tmp = self.get_act_scale(x_tmp)
 
-        if self.trans_version == 'v1' and not is_gqa:
-            scales = (
-                (x_tmp.pow(ratio) / w_tmp.pow(1 - ratio))
-                .clamp(min=1e-4)
-                .view(-1)
-            )
-        elif self.trans_version == 'v2' or is_gqa:
+        if self.trans_version == "v1" and not is_gqa:
+            scales = (x_tmp.pow(ratio) / w_tmp.pow(1 - ratio)).clamp(min=1e-4).view(-1)
+        elif self.trans_version == "v2" or is_gqa:
             scales = x_tmp.pow(ratio).clamp(min=1e-4).view(-1)
 
         scales = scales / (scales.max() * scales.min()).sqrt()
@@ -118,7 +122,7 @@ class Awq(BaseBlockwiseQuantization):
             outs = []
             b_num = x.shape[0] // self._bs
             for num in range(b_num):
-                _x = x[num * self._bs:(num + 1) * self._bs]
+                _x = x[num * self._bs : (num + 1) * self._bs]
                 out = inspect_module(_x, **kwargs)
                 if isinstance(out, tuple):
                     out = out[0]
@@ -138,17 +142,17 @@ class Awq(BaseBlockwiseQuantization):
             total_loss = 0.0
             b_num = org_out.shape[0] // self._bs
             for num in range(b_num):
-                _org_out = org_out[num * self._bs:(num + 1) * self._bs]
-                _out = out[num * self._bs:(num + 1) * self._bs]
+                _org_out = org_out[num * self._bs : (num + 1) * self._bs]
+                _out = out[num * self._bs : (num + 1) * self._bs]
                 single_loss = (_org_out - _out).float().pow(2).mean().item()
                 total_loss += single_loss
             return total_loss / b_num
 
     def fake_quantize_weight(self, fc, scales, is_gqa, layer_name):
         if fc.weight.data.dtype == torch.float8_e4m3fn:
-            tmp_weight_data = weight_cast_to_bf16(fc.weight.data,
-                                                  fc.weight_scale_inv.data,
-                                                  self.fp8_block_size).to(torch.bfloat16)
+            tmp_weight_data = weight_cast_to_bf16(
+                fc.weight.data, fc.weight_scale_inv.data, self.fp8_block_size
+            ).to(torch.bfloat16)
         else:
             tmp_weight_data = fc.weight.data
 
@@ -156,8 +160,9 @@ class Awq(BaseBlockwiseQuantization):
         tmp_weight_data = self.wquantizer.fake_quant_weight_dynamic(tmp_weight_data)
 
         if fc.weight.data.dtype == torch.float8_e4m3fn:
-            fc.weight.data, fc.weight_scale_inv.data \
-                = weight_cast_to_fp8(tmp_weight_data, self.fp8_block_size)
+            fc.weight.data, fc.weight_scale_inv.data = weight_cast_to_fp8(
+                tmp_weight_data, self.fp8_block_size
+            )
         else:
             fc.weight.data = tmp_weight_data
 
@@ -177,13 +182,7 @@ class Awq(BaseBlockwiseQuantization):
 
     @torch.no_grad()
     def search_scale_subset(
-        self,
-        prev_op,
-        layers_dict,
-        input,
-        inspect_module,
-        is_gqa,
-        subset_kwargs
+        self, prev_op, layers_dict, input, inspect_module, is_gqa, subset_kwargs
     ):
 
         if self.awq_bs is None:
@@ -193,7 +192,7 @@ class Awq(BaseBlockwiseQuantization):
 
         w_max = self.get_weight_scale(layers_dict)
         # grid search for ratio
-        best_error = float('inf')
+        best_error = float("inf")
         best_scales = None
         n_grid = 20
         org_sd = {k: v.cpu() for k, v in inspect_module.state_dict().items()}
@@ -219,7 +218,9 @@ class Awq(BaseBlockwiseQuantization):
                 scales = self.get_scales(prev_op, x, w_max, is_gqa, ratio)
                 for layer_name in layers_dict:
                     fc = layers_dict[layer_name]
-                    fc.weight = self.fake_quantize_weight(fc, scales, is_gqa, layer_name)
+                    fc.weight = self.fake_quantize_weight(
+                        fc, scales, is_gqa, layer_name
+                    )
 
                 x_tmp = self.scaling_input(x, scales, is_gqa)
 
@@ -228,8 +229,13 @@ class Awq(BaseBlockwiseQuantization):
 
                 out = self.inspect_module_forward(x_tmp, inspect_module, kwargs)
 
-                if self.padding_mask and org_out.shape[1] == self.padding_mask[i].shape[-1]:
-                    org_out = org_out * self.padding_mask[i].unsqueeze(dim=-1).to(org_out.device)  # noqa
+                if (
+                    self.padding_mask
+                    and org_out.shape[1] == self.padding_mask[i].shape[-1]
+                ):
+                    org_out = org_out * self.padding_mask[i].unsqueeze(dim=-1).to(
+                        org_out.device
+                    )  # noqa
                     out = out * self.padding_mask[i].unsqueeze(dim=-1).to(out.device)
 
                 loss = self.calculate_loss(org_out, out)
@@ -252,25 +258,25 @@ class Awq(BaseBlockwiseQuantization):
                     gc.collect()
                     torch.cuda.empty_cache()
 
-        # Synchronize across ranks
-        best_error_tensor = torch.tensor([best_error], device='cuda')
-        dist.all_reduce(best_error_tensor, op=dist.ReduceOp.MIN)
-        global_best_error = best_error_tensor.item()
+        # # Synchronize across ranks
+        # best_error_tensor = torch.tensor([best_error], device='cuda')
+        # dist.all_reduce(best_error_tensor, op=dist.ReduceOp.MIN)
+        # global_best_error = best_error_tensor.item()
 
-        # Identify the rank with the minimum loss
-        global_best_rank = torch.tensor([dist.get_rank()
-                                        if abs(best_error - global_best_error) < 1e-5
-                                        else -1],
-                                        device='cuda')
-        dist.all_reduce(global_best_rank, op=dist.ReduceOp.MAX)
-        global_best_rank = global_best_rank.item()
+        # # Identify the rank with the minimum loss
+        # global_best_rank = torch.tensor([dist.get_rank()
+        #                                 if abs(best_error - global_best_error) < 1e-5
+        #                                 else -1],
+        #                                 device='cuda')
+        # dist.all_reduce(global_best_rank, op=dist.ReduceOp.MAX)
+        # global_best_rank = global_best_rank.item()
 
-        # Broadcast the best scales from the rank with the minimum loss to all ranks
-        if dist.get_rank() == global_best_rank:
-            dist.broadcast(best_scales, src=global_best_rank)
-        else:
-            best_scales = torch.zeros_like(best_scales, device='cuda')
-            dist.broadcast(best_scales, src=global_best_rank)
+        # # Broadcast the best scales from the rank with the minimum loss to all ranks
+        # if dist.get_rank() == global_best_rank:
+        #     dist.broadcast(best_scales, src=global_best_rank)
+        # else:
+        #     best_scales = torch.zeros_like(best_scales, device='cuda')
+        #     dist.broadcast(best_scales, src=global_best_rank)
 
         del org_out_dict
         gc.collect()
@@ -283,17 +289,17 @@ class Awq(BaseBlockwiseQuantization):
             super().block_transform(block, input_feat, block_kwargs)
 
         if self.weight_clip:
-            logger.info('auto_clip start')
-            logger.info(f'clip version: {self.clip_version}')
+            logger.info("auto_clip start")
+            logger.info(f"clip version: {self.clip_version}")
             self.auto_clipper.run(
                 block,
                 self.block_idx,
                 input_feat,
-                n_sample_token=self.config.calib.get('seq_len', None)
+                n_sample_token=self.config.calib.get("seq_len", None),
             )
-            logger.info('auto_clip finished')
+            logger.info("auto_clip finished")
         else:
-            logger.info('disable weight clip')
+            logger.info("disable weight clip")
 
     @torch.no_grad()
     def subset_transform(
@@ -302,35 +308,36 @@ class Awq(BaseBlockwiseQuantization):
         input_feat,
         subset_kwargs,
     ):
-        layers_dict = subset['layers']
-        prev_op = subset['prev_op']
-        input_name = subset['input'][0]
-        inspect_module = subset['inspect']
-        do_trans = subset.get('do_trans', True)
+        layers_dict = subset["layers"]
+        prev_op = subset["prev_op"]
+        input_name = subset["input"][0]
+        inspect_module = subset["inspect"]
+        do_trans = subset.get("do_trans", True)
         if not do_trans:
-            logger.info('do_trans is set to False. Do not transform this subset.')
+            logger.info("do_trans is set to False. Do not transform this subset.")
             return
 
-        if self.config['model']['type'] == 'Starcoder':
+        if self.config["model"]["type"] == "Starcoder":
             if isinstance(prev_op[0], (nn.Linear, FakeQuantLinear)):
-                logger.info('Do not transform this subset.')
+                logger.info("Do not transform this subset.")
                 return
 
-        assert (
-            len(prev_op) in (0, 1)
-        ), 'Only support single prev_op. If multi prev_ops, code need to be updated.'
+        assert len(prev_op) in (
+            0,
+            1,
+        ), "Only support single prev_op. If multi prev_ops, code need to be updated."
 
         if len(prev_op) == 0 or (len(prev_op) == 1 and prev_op[0] is None):
-            logger.info('Cannot apply scale. Do not transform this subset.')
+            logger.info("Cannot apply scale. Do not transform this subset.")
             return
 
         if isinstance(
             prev_op[0],
             tuple(
-                _LLMC_LN_TYPES_ +
-                _TRANSFORMERS_LN_TYPES_ +
-                _LLMC_LINEAR_TYPES_ +
-                _TRANSFORMERS_LINEAR_TYPES_
+                _LLMC_LN_TYPES_
+                + _TRANSFORMERS_LN_TYPES_
+                + _LLMC_LINEAR_TYPES_
+                + _TRANSFORMERS_LINEAR_TYPES_
             ),
         ):
             layers = list(layers_dict.values())
@@ -347,7 +354,7 @@ class Awq(BaseBlockwiseQuantization):
                     input_keys = list(input_feat.keys())
                     input_name = input_keys[input_keys.index(input_name) - 1]
                 else:
-                    logger.info('Cannot apply scale. Do not transform this subset.')
+                    logger.info("Cannot apply scale. Do not transform this subset.")
                     return
             else:
                 is_gqa = False
@@ -358,7 +365,7 @@ class Awq(BaseBlockwiseQuantization):
                 input_feat[input_name],
                 inspect_module,
                 is_gqa,
-                subset_kwargs
+                subset_kwargs,
             )
 
             self.apply_scale(scale, prev_op, layers)
@@ -366,7 +373,7 @@ class Awq(BaseBlockwiseQuantization):
 
             if self.save_scale:
                 for n in layers_dict:
-                    layer_name = f'{self.model.block_name_prefix}.{self.block_idx}.{n}'
+                    layer_name = f"{self.model.block_name_prefix}.{self.block_idx}.{n}"
                     self.act_scales[layer_name] = scale
         else:
-            logger.info('Do not transform this subset.')
+            logger.info("Do not transform this subset.")
