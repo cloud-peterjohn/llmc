@@ -2,7 +2,7 @@
 
 # export CUDA_VISIBLE_DEVICES=0,1
 
-llmc=/kaggle/working/Awq/
+llmc=/content/Awq/
 export PYTHONPATH=$llmc:$PYTHONPATH
 
 task_name=hqq_w_only
