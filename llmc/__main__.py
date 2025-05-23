@@ -30,6 +30,11 @@ from llmc.utils import (
 )
 from llmc.utils.registry_factory import ALGO_REGISTRY, MODEL_REGISTRY
 
+import os
+
+os.environ["RANK"] = "0"
+os.environ["WORLD_SIZE"] = "1"
+
 
 def main(config):
     model = MODEL_REGISTRY[config.model.type](config)
