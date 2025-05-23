@@ -102,6 +102,12 @@ def main(config):
         eval_model(model, blockwise_opts, eval_list, eval_pos="fake_quant_wo_kv")
 
         if "save" in config and config.save.get("save_fake", False):
+            import shutil
+            import os
+
+            for path in ["/content/Awq", "/content/eval_data", "/content/llama_model"]:
+                if os.path.exists(path):
+                    shutil.rmtree(path)
             deploy_all_modality(blockwise_opts, "fake_quant")
             blockwise_opt.save_model(save_fake_path)
 
