@@ -5,10 +5,10 @@
 llmc=/kaggle/working/Awq/
 export PYTHONPATH=$llmc:$PYTHONPATH
 
-task_name=step_1_awq
-config=${llmc}/configs/quantization/combination/awq_comb_omni/w4a16g128/step_1_awq.yml
-# task_name=step_2_omni
-# config=${llmc}/configs/quantization/combination/awq_comb_omni/w4a16g128/step_2_omniq.yml
+# task_name=step_1_awq
+# config=${llmc}/configs/quantization/combination/awq_comb_omni/w4a16g128/step_1_awq.yml
+task_name=step_2_omni
+config=${llmc}/configs/quantization/combination/awq_comb_omni/w4a16g128/step_2_omniq.yml
 
 # nnodes=1
 # nproc_per_node=1
