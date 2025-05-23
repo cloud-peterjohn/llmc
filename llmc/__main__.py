@@ -191,6 +191,7 @@ def main(config):
 
 
 if __name__ == "__main__":
+    torch.cuda.empty_cache()
     logger.add(sys.stdout, level="INFO")
     llmc_start_time = time.time()
     parser = argparse.ArgumentParser()

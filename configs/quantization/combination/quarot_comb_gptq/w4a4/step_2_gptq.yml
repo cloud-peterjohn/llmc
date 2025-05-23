@@ -5,11 +5,12 @@ model:
     # Load Quarot-transformed model
     path: /kaggle/working/save_quarot_trans_for_gptq/transformed_model
     torch_dtype: auto
+    use_cpu_to_save_cuda_mem_for_catcher: True
 calib:
     name: wikitext2
     download: True
     path: /kaggle/working/calib_data
-    n_samples: 128
+    n_samples: 64
     bs: 1
     seq_len: 2048
     preproc: wikitext2_gptq
